@@ -4,11 +4,16 @@
 > construit avec **FastMCP 3.x** et le transport **streamable-http**.  
 > Expose 115 outils couvrant l'ensemble de l'API Web Service de Moodle.
 
+> **Plugin requis pour les outils Quiz :**  
+> 📦 [Sergio-Oracle/moodle-local-mcp-quiz](https://github.com/Sergio-Oracle/moodle-local-mcp-quiz)  
+> → Installez ce plugin Moodle pour activer les 6 outils `mcp_create_quiz`, `mcp_create_*_question`, etc.
+
 ---
 
 ## Table des matières
 
 - [Aperçu](#aperçu)
+- [Plugins Moodle requis](#plugins-moodle-requis)
 - [Prérequis](#prérequis)
 - [Installation rapide](#installation-rapide)
 - [Configuration](#configuration)
@@ -20,6 +25,30 @@
 - [Obtenir le token Moodle](#obtenir-le-token-moodle)
 - [Dépannage](#dépannage)
 - [Licence](#licence)
+
+---
+
+## Plugins Moodle requis
+
+Certains outils MCP dépendent de **plugins Moodle personnalisés** qui doivent être installés
+sur votre instance Moodle **avant** de les utiliser.
+
+| Plugin | Dépôt | Outils MCP activés |
+|--------|-------|-------------------|
+| `local_mcp_quiz` | 📦 [moodle-local-mcp-quiz](https://github.com/Sergio-Oracle/moodle-local-mcp-quiz) | `mcp_create_quiz`, `mcp_create_question_category`, `mcp_create_multichoice_question`, `mcp_create_shortanswer_question`, `mcp_create_truefalse_question`, `mcp_add_question_to_quiz` |
+
+> Sans ce plugin, les 6 outils `mcp_*` retourneront une erreur `invalidfunction`.
+
+### Installation rapide du plugin
+
+```bash
+cd /var/www/html/moodle/local/
+git clone https://github.com/Sergio-Oracle/moodle-local-mcp-quiz.git mcp_quiz
+php /var/www/html/moodle/admin/cli/upgrade.php --non-interactive
+```
+
+Puis ajouter les 6 fonctions à votre service Web Service Moodle
+(voir le [README du plugin](https://github.com/Sergio-Oracle/moodle-local-mcp-quiz#activer-le-service-web-service-dans-moodle)).
 
 ---
 
@@ -422,7 +451,8 @@ Redémarrer Claude Desktop. Les 115 outils Moodle apparaissent automatiquement.
 | `update_question_flag` | Mettre à jour le flag d'une question |
 
 ### Quiz — Plugin local_mcp (RTN)
-> Fonctions personnalisées du plugin `local_mcp_quiz` développé par RTN.
+> Fonctions personnalisées du plugin `local_mcp_quiz`.  
+> ⚠️ **Requis :** installer [moodle-local-mcp-quiz](https://github.com/Sergio-Oracle/moodle-local-mcp-quiz) sur votre Moodle.
 
 | Outil | Description |
 |-------|-------------|
