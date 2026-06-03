@@ -39,7 +39,20 @@ sur votre instance Moodle **avant** de les utiliser.
 
 > Sans ce plugin, les 6 outils `mcp_*` retourneront une erreur `invalidfunction`.
 
-### Installation rapide du plugin
+### Installation du plugin — 2 méthodes
+
+#### Méthode graphique (recommandé, sans ligne de commande)
+
+1. Télécharger le ZIP officiel :  
+   👉 **[mcp_quiz.zip](https://github.com/Sergio-Oracle/moodle-local-mcp-quiz/releases/latest/download/mcp_quiz.zip)**
+
+2. Dans Moodle : **Administration du site → Plugins → Installer un plugin**
+
+3. Déposer le fichier `mcp_quiz.zip` → **Installer le plugin depuis le fichier ZIP**
+
+4. Suivre l'assistant jusqu'à la fin
+
+#### Méthode SSH (serveur)
 
 ```bash
 cd /var/www/html/moodle/local/
