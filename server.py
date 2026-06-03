@@ -1427,4 +1427,5 @@ if __name__ == "__main__":
         port=MCP_PORT,
         path="/mcp",
         log_level="info",
+        stateless_http=True,
     )

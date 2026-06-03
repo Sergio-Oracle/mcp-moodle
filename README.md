@@ -540,6 +540,43 @@ Redémarrer Claude Desktop. Les 115 outils Moodle apparaissent automatiquement.
 
 ---
 
+## Intégration avec un agent IA (Hermes Agent)
+
+Ce serveur MCP est conçu pour fonctionner avec tout client MCP, notamment [Hermes Agent](https://github.com/NousResearch/hermes-agent).
+
+### Configuration dans `~/.hermes/config.yaml`
+
+```yaml
+mcp_servers:
+  moodle:
+    url: https://mcp.votre-domaine.com/mcp
+    connect_timeout: 10
+    timeout: 30
+    headers:
+      Accept: application/json, text/event-stream
+    tools:
+      prompts: false
+      resources: false
+```
+
+### Pourquoi `stateless_http=True` est indispensable
+
+Par défaut, FastMCP maintient des **sessions HTTP persistantes** (identifiées par un `mcp-session-id`).
+Quand une session expire côté serveur (redémarrage, timeout), le client obtient `Session terminated` et
+ne peut plus appeler aucun outil — même si le serveur est parfaitement opérationnel.
+
+Avec `stateless_http=True` (activé dans ce projet depuis la v1.1), **chaque requête est indépendante** :
+aucune session à maintenir, aucune interruption possible.
+
+```
+# Erreur sans stateless_http (ancienne version)
+MCP tool moodle/get_courses call failed: Session terminated
+
+# Avec stateless_http=True (version actuelle) → aucune erreur de session
+```
+
+---
+
 ## Dépannage
 
 ### Le serveur ne démarre pas
@@ -575,6 +612,19 @@ ss -tlnp | grep 8090   # Le port 8090 doit être en écoute
 - Le token est expiré ou invalide → en générer un nouveau dans Moodle
 - L'utilisateur associé au token n'a pas les permissions nécessaires
 - Le service web n'a pas les fonctions requises activées
+
+### Erreur "Session terminated" (agents IA / Hermes)
+
+Ce problème survenait avec les anciennes versions du serveur (`stateless_http` non activé).
+
+```bash
+# Vérifier que stateless_http=True est présent dans server.py
+grep 'stateless_http' server.py
+# Doit retourner : stateless_http=True,
+
+# Si absent : éditer server.py et redémarrer
+systemctl restart mcp-moodle
+```
 
 ### Certificat SSL introuvable
 
