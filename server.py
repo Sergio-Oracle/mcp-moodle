@@ -1418,6 +1418,112 @@ async def delete_xapi_state(
     return await call_moodle("core_xapi_delete_state", params)
 
 
+
+# ═══════════════════════════ FICHIERS MOODLE → MATRIX ═══════════════════════════
+
+@mcp.tool()
+async def send_file_to_matrix(
+    fileurl: Annotated[str, Field(description="URL du fichier Moodle (webservice/pluginfile ou autre)")],
+    room_id: Annotated[Optional[str], Field(description="ID de la salle Matrix (ex: !xxx:jn.rtn.sn). Optionnel, utilise MATRIX_HOME_CHANNEL si absent.")] = None,
+    message: Annotated[Optional[str], Field(description="Message d'introduction avant le fichier")] = None,
+) -> dict:
+    """Télécharge un fichier depuis Moodle et l'envoie dans une salle Matrix.
+    Utilise le MOODLE_TOKEN du serveur pour authentifier le téléchargement.
+    """
+    import base64, mimetypes, os, re
+    matrix_hs    = os.environ.get("MATRIX_HOMESERVER", "").rstrip("/")
+    matrix_token = os.environ.get("MATRIX_ACCESS_TOKEN", "")
+    target_room  = room_id or os.environ.get("MATRIX_HOME_CHANNEL", "")
+
+    if not matrix_hs or not matrix_token:
+        return {"error": "MATRIX_HOMESERVER ou MATRIX_ACCESS_TOKEN non configuré côté serveur MCP."}
+    if not target_room:
+        return {"error": "room_id non fourni et MATRIX_HOME_CHANNEL absent."}
+
+    # 1. Télécharger le fichier depuis Moodle (avec le token webservice)
+    dl_url = fileurl
+    if "pluginfile.php" in fileurl and "token=" not in fileurl:
+        sep = "&" if "?" in fileurl else "?"
+        dl_url = f"{fileurl}{sep}token={MOODLE_TOKEN}"
+
+    async with httpx.AsyncClient(verify=False, timeout=60.0) as client:
+        try:
+            r = await client.get(dl_url, follow_redirects=True)
+            r.raise_for_status()
+        except Exception as exc:
+            return {"error": f"Téléchargement Moodle échoué : {exc}"}
+
+        file_bytes = r.content
+        ct = r.headers.get("content-type", "application/octet-stream").split(";")[0]
+
+        # Nom du fichier depuis Content-Disposition ou URL
+        cd = r.headers.get("content-disposition", "")
+        m = re.search(r"filename=[\"']?([^\"'\s;]+)", cd)
+        if m:
+            filename = m.group(1)
+        else:
+            filename = fileurl.split("/")[-1].split("?")[0] or "fichier"
+
+    # 2. Uploader sur Matrix (/_matrix/media/v3/upload)
+    upload_url = f"{matrix_hs}/_matrix/media/v3/upload"
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            up = await client.post(
+                upload_url,
+                content=file_bytes,
+                params={"filename": filename},
+                headers={
+                    "Authorization": f"Bearer {matrix_token}",
+                    "Content-Type": ct,
+                },
+            )
+            up.raise_for_status()
+            mxc_uri = up.json().get("content_uri", "")
+        except Exception as exc:
+            return {"error": f"Upload Matrix échoué : {exc}"}
+
+    # 3. Envoyer le message d'introduction si fourni
+    msg_api = f"{matrix_hs}/_matrix/client/v3/rooms/{target_room}/send/m.room.message"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        if message:
+            try:
+                await client.post(
+                    msg_api,
+                    json={"msgtype": "m.text", "body": message},
+                    headers={"Authorization": f"Bearer {matrix_token}"},
+                )
+            except Exception:
+                pass
+
+        # 4. Envoyer le fichier
+        fsize = len(file_bytes)
+        msg_body: dict = {
+            "msgtype": "m.file",
+            "body": filename,
+            "url": mxc_uri,
+            "info": {"size": fsize, "mimetype": ct},
+        }
+        if ct.startswith("image/"):
+            msg_body["msgtype"] = "m.image"
+        elif ct == "application/pdf" or filename.endswith(".pdf"):
+            msg_body["msgtype"] = "m.file"
+
+        try:
+            sr = await client.post(
+                msg_api,
+                json=msg_body,
+                headers={"Authorization": f"Bearer {matrix_token}"},
+            )
+            event_id = sr.json().get("event_id", "?")
+        except Exception as exc:
+            return {"error": f"Envoi Matrix échoué : {exc}"}
+
+    return {
+        "message": f"Fichier '{filename}' ({fsize} octets) envoyé dans {target_room}",
+        "event_id": event_id,
+        "mxc_uri": mxc_uri,
+    }
+
 # ═══════════════════════════ DÉMARRAGE ═══════════════════════════
 
 if __name__ == "__main__":
@@ -1429,3 +1535,4 @@ if __name__ == "__main__":
         log_level="info",
         stateless_http=True,
     )
+
