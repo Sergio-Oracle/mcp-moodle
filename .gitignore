@@ -1,0 +1,20 @@
+# Variables d'environnement — NE JAMAIS COMMITTER
+.env
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environnements virtuels
+venv/
+.venv/
+env/
+
+# Logs
+*.log
+
+# Fichiers de test
+test_tools.py

@@ -1,0 +1,20 @@
+[Unit]
+Description=RTN Moodle MCP Server (FastMCP 3.x)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adapter User et WorkingDirectory selon votre installation
+User=root
+WorkingDirectory=/root/mcp-moodle
+EnvironmentFile=/root/mcp-moodle/.env
+ExecStart=/usr/bin/python3 /root/mcp-moodle/server.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-moodle
+
+[Install]
+WantedBy=multi-user.target
